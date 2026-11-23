@@ -1,5 +1,4 @@
 import { createClassifier } from "./classifier.mjs";
-import { applyContext } from "./context.mjs";
 
 let predict;
 
@@ -18,7 +17,7 @@ self.onmessage = event => {
   if (!predict) return;
   try {
     const results = texts.map((text, index) => {
-      const result = applyContext(text, predict(text));
+      const result = predict(text);
       if (texts.length > 1 && (index + 1) % 12 === 0) {
         postMessage({ type: "progress", id, complete: index + 1, total: texts.length });
       }

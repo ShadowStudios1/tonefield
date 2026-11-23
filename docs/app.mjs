@@ -30,9 +30,22 @@ function writeStorage(key, data) {
 function loadHistory() {
   try {
     const data = JSON.parse(readStorage(STORAGE.history) || "[]");
-    return Array.isArray(data) ? data.filter(row =>
-      typeof row.text === "string" && LABELS.includes(row.result?.label) && row.result.scores
-    ).slice(0, SAVE_LIMIT) : [];
+    if (!Array.isArray(data)) return [];
+    const entries = data.filter(row =>
+      typeof row?.text === "string" && LABELS.includes(row.result?.label) && row.result.scores
+    ).slice(0, SAVE_LIMIT);
+
+    let migrated = false;
+    const history = entries.map(row => {
+      const { context, ...result } = row.result;
+      const label = context?.modelLabel;
+      if (!LABELS.includes(label) || !Number.isFinite(result.scores[label])) return row;
+
+      migrated = true;
+      return { ...row, result: { ...result, label, confidence: result.scores[label] } };
+    });
+    if (migrated) writeStorage(STORAGE.history, JSON.stringify(history));
+    return history;
   } catch { return []; }
 }
 
@@ -115,9 +128,7 @@ function startModel() {
   }
 
   try {
-    const workerURL = new URL("./worker.mjs", import.meta.url);
-    workerURL.search = new URL(import.meta.url).search;
-    const worker = new Worker(workerURL, { type: "module" });
+    const worker = new Worker(new URL("./worker.mjs", import.meta.url), { type: "module" });
     state.worker = worker;
     worker.addEventListener("error", () => failed("The model could not start. Use Retry model to reload it."));
     worker.addEventListener("message", event => {
@@ -169,16 +180,6 @@ function tag(label, text = label) {
   return '<span class="tag ' + label.toLowerCase() + '"><i></i>' + escapeHtml(text) + '</span>';
 }
 
-function predictionTag(result) {
-  const context = result.context;
-  return tag(result.label) + (context
-    ? '<small class="prediction-context" title="' + escapeHtml(context.reason) + '">Context adjusted</small>' : "");
-}
-
-function displayConfidence(result) {
-  return result.confidence == null ? "—" : scoreText(result.confidence);
-}
-
 function renderEmpty(message) {
   state.last = null;
   $("copy-result").disabled = true;
@@ -189,18 +190,13 @@ function renderEmpty(message) {
 function renderSingle(result, text, source = "") {
   state.last = { result, text };
   $("copy-result").disabled = false;
-  const context = result.context;
   const notes = [];
-  if (result.totalTokens > result.tokens) notes.push("LSTM scores use the first " + result.tokens + " tokens.");
+  if (result.totalTokens > result.tokens) notes.push("Only the first " + result.tokens + " tokens were analyzed.");
   if (result.known / result.tokens < .6) notes.push("Many words were outside the model’s vocabulary.");
   $("single-result").innerHTML =
-    '<div class="verdict ' + result.label.toLowerCase() + '"><div><small>' +
-    (context ? 'Context-adjusted sentiment' : 'Predicted sentiment') + '</small>' +
+    '<div class="verdict ' + result.label.toLowerCase() + '"><div><small>Predicted sentiment</small>' +
     '<strong class="result-badge"><i></i>' + result.label + '</strong></div>' +
-    (context ? "" : '<div class="score-big"><small>Model confidence</small><strong>' +
-      escapeHtml(displayConfidence(result)) + '</strong></div>') + '</div>' +
-    (context ? '<p class="result-note context-note">' + escapeHtml(context.reason) + '</p>' +
-      '<p class="score-heading">Original LSTM scores</p>' : "") +
+    '<div class="score-big"><small>Model confidence</small><strong>' + escapeHtml(scoreText(result.confidence)) + '</strong></div></div>' +
     '<dl class="scores">' + LABELS.map(label => {
       const score = percent(result.scores[label]);
       return '<div class="score-row ' + label.toLowerCase() + '"><dt>' + label + '</dt>' +
@@ -379,8 +375,8 @@ function renderBatch() {
     : "Your predictions will appear here.";
   const rows = visible.map(({ index, text, result }) =>
     '<tr><td class="number-cell">' + index + '</td><td class="table-comment">' + escapeHtml(text) + '</td>' +
-    '<td>' + (result.error ? 'Unscored' : predictionTag(result)) + '</td><td class="number-cell">' +
-    escapeHtml(displayConfidence(result)) + '</td></tr>');
+    '<td>' + (result.error ? 'Unscored' : tag(result.label)) + '</td><td class="number-cell">' +
+    (result.error ? '—' : escapeHtml(scoreText(result.confidence))) + '</td></tr>');
   $("batch-table").innerHTML = rows.length ? resultTable(["#", "Comment", "Sentiment", "Confidence"], rows, "Batch predictions")
     : (results.length ? '<p class="table-empty">No predictions match this filter.</p>' : '');
 }
@@ -410,8 +406,8 @@ function renderHistory() {
   }
   const rows = selected.map(({ text, result, id, createdAt }) => {
     const date = new Date(createdAt);
-    return '<tr><td class="table-comment">' + escapeHtml(text) + '</td><td>' + predictionTag(result) +
-      '</td><td class="number-cell">' + escapeHtml(displayConfidence(result)) +
+    return '<tr><td class="table-comment">' + escapeHtml(text) + '</td><td>' + tag(result.label) +
+      '</td><td class="number-cell">' + escapeHtml(scoreText(result.confidence)) +
       '</td><td class="number-cell"><time datetime="' + escapeHtml(createdAt) + '">' +
       escapeHtml(date.toLocaleDateString(undefined, { month: "short", day: "numeric" })) +
       '</time></td><td><button type="button" class="text-button" data-history-id="' +
@@ -421,12 +417,9 @@ function renderHistory() {
 }
 
 function exportRows(rows, name) {
-  const records = [["text", "sentiment", "confidence", "positive", "neutral", "negative", "analyzed_at", "error",
-    "lstm_prediction", "decision_source", "context_reason"]];
+  const records = [["text", "sentiment", "confidence", "positive", "neutral", "negative", "analyzed_at", "error"]];
   for (const { text, result, createdAt } of rows) {
-    records.push([text, result.label, result.confidence?.toFixed(6),
-      ...LABELS.map(label => result.scores?.[label].toFixed(6)), createdAt, result.error,
-      result.context?.modelLabel ?? result.label, result.error ? "" : (result.context ? "context" : "lstm"), result.context?.reason]);
+    records.push([text, result.label, result.confidence?.toFixed(6), ...LABELS.map(label => result.scores?.[label].toFixed(6)), createdAt, result.error]);
   }
   const csv = records.map(row => row.map(csvValue).join(",")).join("\r\n");
   const download = document.createElement("a");
@@ -488,10 +481,7 @@ $("copy-result").addEventListener("click", async () => {
   if (!state.last) return;
   try {
     const { result } = state.last;
-    const summary = result.context
-      ? result.label + " (context adjusted)\n" + result.context.reason + "\nOriginal LSTM scores"
-      : result.label + " (" + displayConfidence(result) + " confidence)";
-    await navigator.clipboard.writeText(summary + "\n" +
+    await navigator.clipboard.writeText(result.label + " (" + scoreText(result.confidence) + " confidence)\n" +
       LABELS.map(label => label + " " + scoreText(result.scores[label])).join(" · "));
     toast("Result copied");
   } catch {

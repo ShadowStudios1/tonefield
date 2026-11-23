@@ -9,7 +9,7 @@
 <p align="center">
   <a href="https://shadowstudios1.github.io/tonefield/"><img alt="Open the live demo on GitHub Pages" src="https://img.shields.io/badge/Live_demo-GitHub_Pages-255d42?style=flat-square&amp;logo=githubpages&amp;logoColor=white"></a>
   <a href="https://github.com/ShadowStudios1/tonefield/actions/workflows/verify.yml"><img alt="Verification workflow status" src="https://github.com/ShadowStudios1/tonefield/actions/workflows/verify.yml/badge.svg?branch=main"></a>
-  <a href="#model"><img alt="96.1 percent LSTM held-out accuracy" src="https://img.shields.io/badge/LSTM_test_accuracy-96.1%25-317650?style=flat-square"></a>
+  <a href="#model"><img alt="96.1 percent held-out accuracy" src="https://img.shields.io/badge/Held--out_accuracy-96.1%25-317650?style=flat-square"></a>
   <a href="#retrain-and-predict-from-the-terminal"><img alt="LSTM trained with PyTorch" src="https://img.shields.io/badge/Model-PyTorch_LSTM-a54d34?style=flat-square&amp;logo=pytorch&amp;logoColor=white"></a>
 </p>
 
@@ -36,14 +36,12 @@ The LSTM classifies comments as **positive**, **neutral**, or **negative**. Trai
 
 | Metric | Value |
 | --- | ---: |
-| LSTM held-out test accuracy | 96.1% |
+| Held-out test accuracy | 96.1% |
 | Macro F1 | 95.7% |
 | Held-out test comments | 39,180 |
 | Majority-class baseline | 44.2% |
 
-The browser also checks for specific patterns such as relief at leaving, an unresolved software failure, or praise followed by a setback. When the check adjusts a prediction, Tonefield explains the cue and shows the original LSTM scores separately. CSV exports include the original prediction, decision source, and reason. Context-adjusted results have a blank confidence field because the context check does not estimate a probability.
-
-The LSTM reads up to 100 tokens of primarily English social text. These metrics measure agreement with the supplied labels. Unfamiliar language, sarcasm, and different kinds of text can change performance.
+The model reads up to 100 tokens of primarily English social text. These metrics measure agreement with the supplied labels. Unfamiliar language, sarcasm, and different kinds of text can change performance.
 
 ## Run locally
 

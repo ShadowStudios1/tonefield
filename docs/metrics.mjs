@@ -28,7 +28,7 @@ function createTable(headers, rows) {
 
 export function renderMetrics(element, metrics, maxTokens) {
   const cards = [
-    ["LSTM test accuracy", percent(metrics.testAccuracy), "Correct on held-out data"],
+    ["Test accuracy", percent(metrics.testAccuracy), "Correct on held-out data"],
     ["Macro F1", percent(metrics.macroF1), "Each class weighted equally"],
     ["Held-out comments", formatNumber(metrics.samples.test), "Used to evaluate the model"],
     ["Majority baseline", percent(metrics.majorityBaseline), "Always predicts the largest class"],
@@ -67,8 +67,7 @@ export function renderMetrics(element, metrics, maxTokens) {
       ' validation · ' + formatNumber(metrics.samples.test) + ' test</p>' +
       createTable(["Source", "Raw rows", "Unique usable", "Test comments", "Test accuracy"], sources) +
       '<p>Text columns were normalized across both files. Blank rows, invalid labels, and duplicate inputs were filtered before splitting.</p>' +
-      '<p>These metrics describe the original LSTM. The browser also checks for specific contextual cues, including sarcasm and relief at leaving.</p>' +
-      '<p>The LSTM reads up to ' + maxTokens + ' tokens of primarily English social text. Test scores describe these datasets. Sarcasm, slang, or a new domain can change performance.</p></section>';
+      '<p>The model reads up to ' + maxTokens + ' tokens of primarily English social text. Test scores describe these datasets. Sarcasm, slang, or a new domain can change performance.</p></section>';
 
   const chart = element.querySelector(".training-chart");
   let metric = "Accuracy";
