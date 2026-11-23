@@ -1,0 +1,23 @@
+name: Verify Tonefield
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Verify the static app and exported model
+        run: node scripts/verify.mjs
+      - name: Validate the Python trainer
+        run: python3 -m py_compile training/train.py
