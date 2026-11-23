@@ -142,6 +142,10 @@ kbd{border:1px solid var(--line);border-radius:5px;background:var(--surface-alt)
 .result-meta span{display:inline-flex;align-items:center;gap:4px}
 .result-meta svg{width:13px;height:13px}
 .result-note{font-size:.745rem;color:var(--muted);margin-top:8px}
+.context-note{font-size:.79rem}
+.score-heading{font-size:.75rem;font-weight:820;color:var(--muted);margin-top:12px}
+.score-heading+.scores{margin-top:6px}
+.prediction-context{display:block;color:var(--muted);font-size:.72rem;margin-top:3px}
 @keyframes fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 
 .model-strip{display:grid;grid-template-columns:1fr 1fr 1fr auto;align-items:center;gap:0;border:1px solid var(--line);border-radius:12px;background:var(--surface);margin-top:16px;padding:9px 15px}
